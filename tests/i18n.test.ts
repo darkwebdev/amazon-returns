@@ -66,7 +66,7 @@ describe('Internationalization', () => {
 
     it('should format paid returns in English', () => {
       const text = formatReturnText(false, '$15.99', 30, 'en');
-      expect(text).toBe('Non-free returns ($15.99 cost) within 30 days');
+      expect(text).toBe('Non-free returns ($15.99 shipping cost) within 30 days');
     });
 
     it('should format free returns in German', () => {
@@ -76,12 +76,12 @@ describe('Internationalization', () => {
 
     it('should format paid returns in German', () => {
       const text = formatReturnText(false, '€12.50', 14, 'de');
-      expect(text).toBe('Kostenpflichtige Rücksendung (€12.50 Kosten) innerhalb von 14 Tagen');
+      expect(text).toBe('Kostenpflichtige Rücksendung (€12.50 Versandkosten) innerhalb von 14 Tagen');
     });
 
     it('should handle missing cost with placeholder', () => {
       const text = formatReturnText(false, null, 30, 'en');
-      expect(text).toBe('Non-free returns (? cost) within 30 days');
+      expect(text).toBe('Non-free returns (? shipping cost) within 30 days');
     });
   });
 
