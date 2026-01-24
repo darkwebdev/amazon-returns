@@ -11,7 +11,7 @@
 
 .amazon-returns-ext__heading {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 400;
   color: #0f1111;
   margin-bottom: 12px;
   padding-bottom: 8px;
@@ -32,7 +32,7 @@
 
 .amazon-returns-ext__label {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 400;
   color: #0f1111;
   margin-bottom: 4px;
 }
@@ -42,7 +42,7 @@
   line-height: 1.5;
   padding: 8px 12px;
   border-radius: 4px;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .amazon-returns-ext__text--free {
@@ -64,6 +64,24 @@
   margin-top: 12px;
   padding-top: 8px;
   border-top: 1px solid #e7e7e7;
+}
+
+.amazon-returns-ext__loading {
+  font-size: 13px;
+  color: #565959;
+  padding: 12px;
+  text-align: center;
+  font-style: italic;
+}
+
+.amazon-returns-ext__error {
+  font-size: 13px;
+  color: #b12704;
+  background-color: #fff8f0;
+  padding: 12px;
+  border-radius: 4px;
+  border-left: 3px solid #b12704;
+  line-height: 1.5;
 }
 
 @media (max-width: 768px) {

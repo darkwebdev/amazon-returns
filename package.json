@@ -1,7 +1,7 @@
 {
   "name": "amazon-returns-extension",
   "version": "1.0.0",
-  "description": "Chrome extension that displays return cost information on Amazon product pages",
+  "description": "Browser extension that displays return cost information on Amazon product pages (Chrome, Edge, Firefox)",
   "packageManager": "yarn@4.6.0",
   "scripts": {
     "dev": "webpack --mode development --watch",
@@ -14,7 +14,10 @@
     "demo": "yarn node demo-extension.js"
   },
   "keywords": [
-    "chrome-extension",
+    "browser-extension",
+    "webextension",
+    "chrome",
+    "firefox",
     "amazon",
     "returns"
   ],
@@ -26,6 +29,7 @@
     "@types/jest": "^30.0.0",
     "@types/jsdom": "^27.0.0",
     "@types/node": "^25.0.10",
+    "@types/webextension-polyfill": "^0.12.4",
     "copy-webpack-plugin": "^13.0.1",
     "css-loader": "^7.1.2",
     "identity-obj-proxy": "^3.0.0",
@@ -40,5 +44,8 @@
     "typescript": "^5.9.3",
     "webpack": "^5.104.1",
     "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "webextension-polyfill": "^0.12.0"
   }
 }

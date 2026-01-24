@@ -1,6 +1,14 @@
-# Amazon Returns Cost Information - Chrome Extension
+# Amazon Returns Cost Information - Browser Extension
 
-A Chrome extension that displays return cost information on Amazon product pages for US (amazon.com) and Germany (amazon.de).
+A browser extension that displays return cost information on Amazon product pages for US (amazon.com) and Germany (amazon.de).
+
+## Browser Support
+
+Works in:
+- Chrome, Edge, and other Chromium-based browsers
+- Firefox (version 109+)
+
+Requires Manifest V3 support (Chrome 109+, Firefox 109+).
 
 ## Features
 
@@ -25,11 +33,19 @@ yarn install
 yarn build
 ```
 
-3. Load the extension in Chrome:
-   - Navigate to `chrome://extensions`
+3. Load the extension:
+
+**Chrome/Edge:**
+   - Navigate to `chrome://extensions` (Chrome) or `edge://extensions` (Edge)
    - Enable "Developer mode" (toggle in top right)
    - Click "Load unpacked"
    - Select the `dist/` folder from this project
+
+**Firefox:**
+   - Navigate to `about:debugging#/runtime/this-firefox`
+   - Click "Load Temporary Add-on"
+   - Select the `dist/manifest.json` file
+   - Note: Temporary add-ons in Firefox are removed when the browser closes
 
 ### Development Mode (Watch)
 
@@ -183,13 +199,29 @@ src/
 
 - TypeScript
 - Webpack 5
-- Chrome Extension Manifest V3
+- Browser Extension Manifest V3
+- WebExtension Polyfill (cross-browser compatibility)
 - Vanilla JavaScript (no frameworks)
 
 ## Supported Regions
 
 - United States (amazon.com) - English
 - Germany (amazon.de) - German
+
+## Cross-Browser Compatibility
+
+The extension uses `webextension-polyfill` to ensure consistent behavior across Chrome, Edge, and Firefox:
+
+- **Single codebase**: Same code works in all browsers
+- **Unified API**: Uses standard `browser.*` namespace (polyfill translates to `chrome.*` in Chromium browsers)
+- **No browser-specific code**: All functionality works identically across browsers
+- **Single build**: The `dist/` folder works for all browsers without modification
+
+**Technical details:**
+- Chrome uses callback-based `chrome.*` API
+- Firefox uses promise-based `browser.*` API
+- WebExtension polyfill provides unified promise-based `browser.*` API for both
+- Manifest V3 is fully supported in Chrome 109+ and Firefox 109+
 
 ## Development Documentation
 

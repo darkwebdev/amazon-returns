@@ -1,8 +1,9 @@
 import './styles.css';
+import browser from 'webextension-polyfill';
 import { detectAmazonRegion, detectLanguage } from '../shared/regionDetector';
 import { scrapeProductPagePolicy, getFallbackPolicy } from './policyScraper';
 import { detectThirdPartySeller, fetchSellerReturnPolicy } from './sellerScraper';
-import { createReturnInfoWidget, injectWidget } from './ui';
+import { createReturnInfoWidget, createLoadingWidget, createErrorWidget, injectWidget, updateWidget } from './ui';
 import { ReturnPolicyData } from '../shared/types';
 
 async function main() {
@@ -19,24 +20,38 @@ async function main() {
     await waitForProductDetails();
   }
 
-  const existingWidget = document.querySelector('.amazon-returns-ext__widget');
+  const existingWidget = document.getElementById('amazon-returns-ext-widget');
   if (existingWidget) {
     console.log('[Amazon Returns Extension] Widget already exists');
     return;
   }
 
+  // Inject loading widget immediately
+  const loadingWidget = createLoadingWidget(language);
+  injectWidget(loadingWidget);
+  console.log('[Amazon Returns Extension] Loading widget injected');
+
   let policyData: ReturnPolicyData | null = null;
 
   const sellerInfo = detectThirdPartySeller();
+  console.log('[Amazon Returns Extension] Seller detection result:', sellerInfo);
 
   if (sellerInfo.isThirdParty && sellerInfo.sellerLink) {
-    console.log('[Amazon Returns Extension] Third-party seller detected:', sellerInfo.sellerName);
+    console.log('[Amazon Returns Extension] Third-party seller detected:', sellerInfo.sellerName, 'Link:', sellerInfo.sellerLink);
 
+    console.log('[Amazon Returns Extension] Checking cache for seller:', sellerInfo.sellerId);
     const cachedPolicy = await getCachedSellerPolicy(sellerInfo.sellerId || '', region.domain);
     if (cachedPolicy) {
+      console.log('[Amazon Returns Extension] Found cached policy for seller');
       policyData = cachedPolicy;
       policyData.sellerName = sellerInfo.sellerName || undefined;
+      policyData.sellerLink = sellerInfo.sellerLink || undefined;
+      // Construct clean seller page URL from seller ID
+      if (sellerInfo.sellerId) {
+        policyData.sellerPageLink = `https://${region.domain}/sp?seller=${sellerInfo.sellerId}`;
+      }
     } else {
+      console.log('[Amazon Returns Extension] No cached policy, fetching from seller page...');
       const sellerPolicy = await fetchSellerReturnPolicy(
         sellerInfo.sellerLink,
         language,
@@ -44,9 +59,38 @@ async function main() {
       );
 
       if (sellerPolicy) {
+        console.log('[Amazon Returns Extension] Successfully fetched seller policy:', sellerPolicy);
         policyData = sellerPolicy;
         policyData.sellerName = sellerInfo.sellerName || undefined;
+        policyData.sellerLink = sellerInfo.sellerLink || undefined;
+        // Construct clean seller page URL from seller ID
+        if (sellerInfo.sellerId) {
+          policyData.sellerPageLink = `https://${region.domain}/sp?seller=${sellerInfo.sellerId}`;
+        }
         await cacheSellerPolicy(sellerInfo.sellerId || '', region.domain, sellerPolicy);
+      } else {
+        console.log('[Amazon Returns Extension] Failed to fetch seller policy from page, using third-party seller defaults');
+        // Use default third-party seller policy
+        policyData = {
+          isFreeReturn: false,
+          returnCost: region.domain === 'amazon.de' ? '€6.50-€13.00' : '$5.00-$10.00',
+          returnWindow: region.defaultReturnWindow,
+          defectivePolicy: {
+            isFree: true,
+            cost: null,
+            window: region.defaultReturnWindow,
+          },
+          regularReturnPolicy: {
+            isFree: false,
+            cost: region.domain === 'amazon.de' ? '€6.50-€13.00' : '$5.00-$10.00',
+            window: region.defaultReturnWindow,
+          },
+          isThirdPartySeller: true,
+          sellerName: sellerInfo.sellerName || undefined,
+          sellerLink: sellerInfo.sellerLink || undefined,
+          sellerPageLink: sellerInfo.sellerId ? `https://${region.domain}/sp?seller=${sellerInfo.sellerId}` : undefined,
+        };
+        console.log('[Amazon Returns Extension] Using default third-party seller policy');
       }
     }
   }
@@ -59,17 +103,16 @@ async function main() {
     }
   }
 
-  // If we still don't have policy data, DO NOT show the widget
-  // Never guess or assume - only show verified information
-  if (!policyData) {
-    console.log('[Amazon Returns Extension] Unable to determine return policy - widget not displayed');
-    return;
+  // Update widget with data or error
+  if (policyData) {
+    const widget = createReturnInfoWidget(policyData, language);
+    updateWidget(widget);
+    console.log('[Amazon Returns Extension] Widget updated with policy data');
+  } else {
+    const errorWidget = createErrorWidget(language);
+    updateWidget(errorWidget);
+    console.log('[Amazon Returns Extension] Unable to determine return policy - showing error message');
   }
-
-  const widget = createReturnInfoWidget(policyData, language);
-  injectWidget(widget);
-
-  console.log('[Amazon Returns Extension] Widget injected successfully with verified data');
 }
 
 function waitForProductDetails(): Promise<void> {
@@ -91,7 +134,7 @@ function waitForProductDetails(): Promise<void> {
 async function getCachedSellerPolicy(sellerId: string, domain: string): Promise<ReturnPolicyData | null> {
   const cacheKey = `seller-${sellerId}-${domain}`;
   try {
-    const result = await chrome.storage.local.get(cacheKey);
+    const result = await browser.storage.local.get(cacheKey);
     if (result[cacheKey]) {
       const cached = result[cacheKey] as { policy: ReturnPolicyData; timestamp: number };
       const now = Date.now();
@@ -110,7 +153,7 @@ async function getCachedSellerPolicy(sellerId: string, domain: string): Promise<
 async function cacheSellerPolicy(sellerId: string, domain: string, policy: ReturnPolicyData): Promise<void> {
   const cacheKey = `seller-${sellerId}-${domain}`;
   try {
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       [cacheKey]: {
         policy,
         timestamp: Date.now(),

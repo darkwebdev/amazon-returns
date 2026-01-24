@@ -20,6 +20,8 @@ export interface ReturnPolicyData {
     window: number;
   };
   sellerName?: string;
+  sellerLink?: string;
+  sellerPageLink?: string; // Seller's main storefront page
   isThirdPartySeller: boolean;
 }
 
