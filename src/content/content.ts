@@ -9,40 +9,32 @@ import { ReturnPolicyData } from '../shared/types';
 async function main() {
   const region = detectAmazonRegion();
   if (!region) {
-    console.log('[Amazon Returns Extension] Not on a supported Amazon domain');
     return;
   }
 
   const language = detectLanguage(region);
 
   if (!document.querySelector('#productTitle') && !document.querySelector('#price')) {
-    console.log('[Amazon Returns Extension] Product details not found, waiting...');
     await waitForProductDetails();
   }
 
   const existingWidget = document.getElementById('amazon-returns-ext-widget');
   if (existingWidget) {
-    console.log('[Amazon Returns Extension] Widget already exists');
     return;
   }
 
   // Inject loading widget immediately
   const loadingWidget = createLoadingWidget(language);
   injectWidget(loadingWidget);
-  console.log('[Amazon Returns Extension] Loading widget injected');
 
   let policyData: ReturnPolicyData | null = null;
 
   const sellerInfo = detectThirdPartySeller();
-  console.log('[Amazon Returns Extension] Seller detection result:', sellerInfo);
 
   if (sellerInfo.isThirdParty && sellerInfo.sellerLink) {
-    console.log('[Amazon Returns Extension] Third-party seller detected:', sellerInfo.sellerName, 'Link:', sellerInfo.sellerLink);
 
-    console.log('[Amazon Returns Extension] Checking cache for seller:', sellerInfo.sellerId);
     const cachedPolicy = await getCachedSellerPolicy(sellerInfo.sellerId || '', region.domain);
     if (cachedPolicy) {
-      console.log('[Amazon Returns Extension] Found cached policy for seller');
       policyData = cachedPolicy;
       policyData.sellerName = sellerInfo.sellerName || undefined;
       policyData.sellerLink = sellerInfo.sellerLink || undefined;
@@ -51,7 +43,6 @@ async function main() {
         policyData.sellerPageLink = `https://${region.domain}/sp?seller=${sellerInfo.sellerId}`;
       }
     } else {
-      console.log('[Amazon Returns Extension] No cached policy, fetching from seller page...');
       const sellerPolicy = await fetchSellerReturnPolicy(
         sellerInfo.sellerLink,
         language,
@@ -59,7 +50,6 @@ async function main() {
       );
 
       if (sellerPolicy) {
-        console.log('[Amazon Returns Extension] Successfully fetched seller policy:', sellerPolicy);
         policyData = sellerPolicy;
         policyData.sellerName = sellerInfo.sellerName || undefined;
         policyData.sellerLink = sellerInfo.sellerLink || undefined;
@@ -69,7 +59,6 @@ async function main() {
         }
         await cacheSellerPolicy(sellerInfo.sellerId || '', region.domain, sellerPolicy);
       } else {
-        console.log('[Amazon Returns Extension] Failed to fetch seller policy from page, using third-party seller defaults');
         // Use default third-party seller policy
         policyData = {
           isFreeReturn: false,
@@ -90,7 +79,6 @@ async function main() {
           sellerLink: sellerInfo.sellerLink || undefined,
           sellerPageLink: sellerInfo.sellerId ? `https://${region.domain}/sp?seller=${sellerInfo.sellerId}` : undefined,
         };
-        console.log('[Amazon Returns Extension] Using default third-party seller policy');
       }
     }
   }
@@ -107,11 +95,9 @@ async function main() {
   if (policyData) {
     const widget = createReturnInfoWidget(policyData, language);
     updateWidget(widget);
-    console.log('[Amazon Returns Extension] Widget updated with policy data');
   } else {
     const errorWidget = createErrorWidget(language);
     updateWidget(errorWidget);
-    console.log('[Amazon Returns Extension] Unable to determine return policy - showing error message');
   }
 }
 

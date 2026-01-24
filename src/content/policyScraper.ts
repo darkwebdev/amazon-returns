@@ -30,24 +30,20 @@ export async function scrapeProductPagePolicy(
     for (const badge of Array.from(badges)) {
       const badgeText = badge.textContent || '';
       if (badgeText.length > 5) {  // Ignore empty/tiny elements
-        console.log('[Amazon Returns Extension] Checking badge:', badgeText.substring(0, 100));
 
         // Check for non-returnable items first
         if (patterns.nonReturnable.test(badgeText)) {
-          console.log('[Amazon Returns Extension] ✗ Item is non-returnable');
           return null;  // Don't display widget for non-returnable items
         }
 
         if (patterns.freeReturns.test(badgeText)) {
           isFreeReturn = true;
           foundAnyReturnInfo = true;
-          console.log('[Amazon Returns Extension] ✓ Found FREE returns indicator');
         }
 
         if (patterns.buyerPays.test(badgeText)) {
           isFreeReturn = false;
           foundAnyReturnInfo = true;
-          console.log('[Amazon Returns Extension] ✓ Found PAID returns indicator');
           const costMatch = badgeText.match(/[\$€£]\d+(?:\.\d{2})?/);
           if (costMatch) {
             returnCost = costMatch[0];
@@ -58,7 +54,6 @@ export async function scrapeProductPagePolicy(
         if (windowMatch) {
           returnWindow = parseInt(windowMatch[1], 10);
           foundAnyReturnInfo = true;
-          console.log('[Amazon Returns Extension] ✓ Found return window:', returnWindow, 'days');
         }
       }
     }
@@ -72,7 +67,6 @@ export async function scrapeProductPagePolicy(
     if (returnableMatch) {
       returnWindow = parseInt(returnableMatch[1], 10);
       foundAnyReturnInfo = true;
-      console.log('[Amazon Returns Extension] ✓ Found returnable window:', returnWindow, 'days');
     }
   }
 
@@ -82,12 +76,10 @@ export async function scrapeProductPagePolicy(
     const text = row.textContent || '';
 
     if (patterns.sectionHeadings.some(heading => text.toLowerCase().includes(heading))) {
-      console.log('[Amazon Returns Extension] Found return policy in product details:', text.substring(0, 100));
       foundAnyReturnInfo = true;
 
       // Check for non-returnable in policy details
       if (patterns.nonReturnable.test(text)) {
-        console.log('[Amazon Returns Extension] ✗ Item marked as non-returnable in policy');
         return null;
       }
 
@@ -114,7 +106,6 @@ export async function scrapeProductPagePolicy(
     const text = section.textContent || '';
 
     if (text && text.trim().length > 10) {  // Only process sections with meaningful content
-      console.log('[Amazon Returns Extension] Checking expandable section, length:', text.length);
 
       if (patterns.freeReturns.test(text)) {
         isFreeReturn = true;
@@ -138,7 +129,6 @@ export async function scrapeProductPagePolicy(
 
   // If we didn't find any return information at all, return null - DO NOT GUESS
   if (!foundAnyReturnInfo) {
-    console.log('[Amazon Returns Extension] No return information found on page - will not display widget');
     return null;
   }
 
@@ -152,17 +142,14 @@ export async function scrapeProductPagePolicy(
     // Explicitly found "FREE Returns" badge
     regularReturnFree = true;
     regularReturnCost = null;
-    console.log('[Amazon Returns Extension] ✓ FREE Returns badge found - no shipping cost');
   } else if (isFreeReturn === false) {
     // Explicitly found paid returns indicator
     regularReturnFree = false;
     // If no explicit cost was extracted, apply regional defaults
     if (!returnCost && region.domain === 'amazon.de') {
       regularReturnCost = '€6.50-€13.00';
-      console.log('[Amazon Returns Extension] ✗ Paid returns detected (applying default cost)');
     } else {
       regularReturnCost = returnCost;
-      console.log('[Amazon Returns Extension] ✗ Paid returns detected');
     }
   } else {
     // isFreeReturn === null: We found return window/policy but NO "FREE Returns" badge
@@ -170,15 +157,12 @@ export async function scrapeProductPagePolicy(
     if (region.domain === 'amazon.de') {
       regularReturnFree = false;
       regularReturnCost = '€6.50-€13.00';
-      console.log('[Amazon Returns Extension] No FREE Returns badge - customer pays return shipping (€6.50-€13.00)');
     } else {
       // For other regions, if we're not sure, don't show widget
-      console.log('[Amazon Returns Extension] Unclear return policy - will not display widget');
       return null;
     }
   }
 
-  console.log('[Amazon Returns Extension] Scraped policy - Regular Return Free:', regularReturnFree, 'Cost:', regularReturnCost, 'Window:', returnWindow);
 
   return {
     isFreeReturn: regularReturnFree,  // Overall return status based on regular returns
