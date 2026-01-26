@@ -43,6 +43,7 @@
   padding: 8px 12px;
   border-radius: 4px;
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .amazon-returns-ext__text--free {
