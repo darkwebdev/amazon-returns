@@ -8,7 +8,7 @@ export const RETURN_PATTERNS = {
     sectionHeadings: ['returns & refunds', 'return policy', 'returns policy'],
   },
   de: {
-    freeReturns: /kostenlose rücksendung|kostenloser rückversand|ohne kosten/i,
+    freeReturns: /kostenlose rücksendung|kostenloser rückversand|ohne kosten|gratis retoure|gratis rücksendung|free returns/i,
     returnWindow: /(?:rückgabe\s+innerhalb\s+von\s+|innerhalb\s+von\s+)?(\d+)[\s-]?(tag|tage|monat|monate)(?:\s+rückgaberecht)?/i,
     buyerPays: /käufer zahlt|kunde zahlt|rücksendekosten|rücksendegebühr/i,
     defective: /defekt|beschädigt|fehlerhaft|nicht wie beschrieben|falscher artikel/i,
@@ -51,5 +51,25 @@ export function formatReturnText(
     return text.freePattern(window);
   } else {
     return text.nonFreePattern(cost || '?', window);
+  }
+}
+
+export function formatReturnHTML(
+  isFree: boolean,
+  cost: string | null,
+  window: number,
+  language: 'en' | 'de'
+): string {
+  const text = UI_TEXT[language];
+  if (isFree) {
+    return text.freePattern(window);
+  } else {
+    const costSpan = `<span style="white-space: nowrap">${cost || '?'}</span>`;
+    const daysSpan = `<span style="white-space: nowrap">${window} ${language === 'en' ? 'days' : 'Tagen'}</span>`;
+    if (language === 'en') {
+      return `Non-free returns (${costSpan} shipping cost) within ${daysSpan}`;
+    } else {
+      return `Kostenpflichtige Rücksendung (${costSpan} Versandkosten) innerhalb von ${daysSpan}`;
+    }
   }
 }

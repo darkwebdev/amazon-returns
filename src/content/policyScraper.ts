@@ -7,16 +7,35 @@ export async function scrapeProductPagePolicy(
   language: 'en' | 'de'
 ): Promise<ReturnPolicyData | null> {
   const patterns = RETURN_PATTERNS[language];
+  // Check both English and German patterns since user can use any language on any domain
+  const patternsEn = RETURN_PATTERNS.en;
+  const patternsDe = RETURN_PATTERNS.de;
 
   let returnWindow = region.defaultReturnWindow;
   let isFreeReturn: boolean | null = null;  // null means not found
   let returnCost: string | null = null;
   let foundAnyReturnInfo = false;
 
+  // First, check if Amazon already shows returns information
+  // Check inside the shipping message container for Amazon's original badge
+  const shippingContainer = document.querySelector('#shippingMessageInsideBuyBox_feature_div');
+
+  if (shippingContainer) {
+    // Look for Amazon's original returns message span
+    const returnsContent = shippingContainer.querySelector('#creturns-return-policy-content');
+
+    if (returnsContent) {
+      // Amazon has returns content - check if it's FREE returns
+      const text = returnsContent.textContent?.trim() || '';
+      if (text.match(/FREE.*Return|GRATIS.*Rück|Kostenlose/i)) {
+        // Amazon shows FREE returns, don't show our badge
+        return null;
+      }
+    }
+  }
+
   // Check for free returns badge (multiple possible locations)
   const badgeSelectors = [
-    '#creturns-return-policy-message',  // Primary location for "FREE Returns" badge
-    '#creturns-policy-anchor-text',     // Backup - link text
     '[id*="freeReturns"]',
     '[class*="free-returns"]',
     '[id*="mir-layout-DELIVERY_BLOCK"]',
@@ -31,17 +50,19 @@ export async function scrapeProductPagePolicy(
       const badgeText = badge.textContent || '';
       if (badgeText.length > 5) {  // Ignore empty/tiny elements
 
-        // Check for non-returnable items first
-        if (patterns.nonReturnable.test(badgeText)) {
+        // Check for non-returnable items first (check both languages)
+        if (patternsEn.nonReturnable.test(badgeText) || patternsDe.nonReturnable.test(badgeText)) {
           return null;  // Don't display widget for non-returnable items
         }
 
-        if (patterns.freeReturns.test(badgeText)) {
+        // Check for free returns in both languages
+        if (patternsEn.freeReturns.test(badgeText) || patternsDe.freeReturns.test(badgeText)) {
           isFreeReturn = true;
           foundAnyReturnInfo = true;
         }
 
-        if (patterns.buyerPays.test(badgeText)) {
+        // Check for buyer pays in both languages
+        if (patternsEn.buyerPays.test(badgeText) || patternsDe.buyerPays.test(badgeText)) {
           isFreeReturn = false;
           foundAnyReturnInfo = true;
           const costMatch = badgeText.match(/[\$€£]\d+(?:\.\d{2})?/);
@@ -50,7 +71,11 @@ export async function scrapeProductPagePolicy(
           }
         }
 
-        const windowMatch = badgeText.match(patterns.returnWindow);
+        // Check return window in both languages
+        let windowMatch = badgeText.match(patternsEn.returnWindow);
+        if (!windowMatch) {
+          windowMatch = badgeText.match(patternsDe.returnWindow);
+        }
         if (windowMatch) {
           returnWindow = parseInt(windowMatch[1], 10);
           foundAnyReturnInfo = true;
@@ -75,17 +100,20 @@ export async function scrapeProductPagePolicy(
   for (const row of Array.from(productDetails)) {
     const text = row.textContent || '';
 
-    if (patterns.sectionHeadings.some(heading => text.toLowerCase().includes(heading))) {
+    // Check both English and German section headings
+    const allHeadings = [...patternsEn.sectionHeadings, ...patternsDe.sectionHeadings];
+    if (allHeadings.some(heading => text.toLowerCase().includes(heading))) {
       foundAnyReturnInfo = true;
 
-      // Check for non-returnable in policy details
-      if (patterns.nonReturnable.test(text)) {
+      // Check for non-returnable in policy details (both languages)
+      if (patternsEn.nonReturnable.test(text) || patternsDe.nonReturnable.test(text)) {
         return null;
       }
 
-      if (patterns.freeReturns.test(text)) {
+      // Check for free returns (both languages)
+      if (patternsEn.freeReturns.test(text) || patternsDe.freeReturns.test(text)) {
         isFreeReturn = true;
-      } else if (patterns.buyerPays.test(text)) {
+      } else if (patternsEn.buyerPays.test(text) || patternsDe.buyerPays.test(text)) {
         isFreeReturn = false;
         const costMatch = text.match(/[\$€£]\d+(?:\.\d{2})?/);
         if (costMatch) {
@@ -93,7 +121,11 @@ export async function scrapeProductPagePolicy(
         }
       }
 
-      const windowMatch = text.match(patterns.returnWindow);
+      // Check return window (both languages)
+      let windowMatch = text.match(patternsEn.returnWindow);
+      if (!windowMatch) {
+        windowMatch = text.match(patternsDe.returnWindow);
+      }
       if (windowMatch) {
         returnWindow = parseInt(windowMatch[1], 10);
       }
@@ -107,10 +139,11 @@ export async function scrapeProductPagePolicy(
 
     if (text && text.trim().length > 10) {  // Only process sections with meaningful content
 
-      if (patterns.freeReturns.test(text)) {
+      // Check for free returns (both languages)
+      if (patternsEn.freeReturns.test(text) || patternsDe.freeReturns.test(text)) {
         isFreeReturn = true;
         foundAnyReturnInfo = true;
-      } else if (patterns.buyerPays.test(text)) {
+      } else if (patternsEn.buyerPays.test(text) || patternsDe.buyerPays.test(text)) {
         isFreeReturn = false;
         foundAnyReturnInfo = true;
         const costMatch = text.match(/[\$€£]\d+(?:\.\d{2})?/);
@@ -119,7 +152,11 @@ export async function scrapeProductPagePolicy(
         }
       }
 
-      const windowMatch = text.match(patterns.returnWindow);
+      // Check return window (both languages)
+      let windowMatch = text.match(patternsEn.returnWindow);
+      if (!windowMatch) {
+        windowMatch = text.match(patternsDe.returnWindow);
+      }
       if (windowMatch) {
         returnWindow = parseInt(windowMatch[1], 10);
         foundAnyReturnInfo = true;
@@ -132,33 +169,34 @@ export async function scrapeProductPagePolicy(
     return null;
   }
 
-  // Determine default return shipping cost based on region if not explicitly free
+  // If we found free returns badge, don't show our widget - Amazon already shows it
+  if (isFreeReturn === true) {
+    return null;
+  }
+
+  // Determine default return shipping cost based on region
+  // If isFreeReturn is null (no explicit info found), assume paid returns for amazon.de
   // Amazon.de charges €6.50-€13.00 for regular returns unless "FREE Returns" badge present
   // Defective items are always free per EU law
   let regularReturnCost = returnCost;
   let regularReturnFree: boolean;
 
-  if (isFreeReturn === true) {
-    // Explicitly found "FREE Returns" badge
-    regularReturnFree = true;
-    regularReturnCost = null;
-  } else if (isFreeReturn === false) {
+  if (isFreeReturn === false) {
     // Explicitly found paid returns indicator
     regularReturnFree = false;
-    // If no explicit cost was extracted, apply regional defaults
     if (!returnCost && region.domain === 'amazon.de') {
       regularReturnCost = '€6.50-€13.00';
     } else {
       regularReturnCost = returnCost;
     }
   } else {
-    // isFreeReturn === null: We found return window/policy but NO "FREE Returns" badge
-    // This means customer pays standard return shipping (unless item is defective)
+    // isFreeReturn === null: No explicit free/paid indicator found
+    // For amazon.de, assume paid returns (conservative approach to show costs)
     if (region.domain === 'amazon.de') {
       regularReturnFree = false;
       regularReturnCost = '€6.50-€13.00';
     } else {
-      // For other regions, if we're not sure, don't show widget
+      // For other regions, don't show if we're not sure
       return null;
     }
   }

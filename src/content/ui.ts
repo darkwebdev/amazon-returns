@@ -1,5 +1,5 @@
 import { ReturnPolicyData } from '../shared/types';
-import { UI_TEXT, formatReturnText } from '../shared/i18n';
+import { UI_TEXT, formatReturnText, formatReturnHTML } from '../shared/i18n';
 
 export function createLoadingWidget(language: 'en' | 'de'): HTMLElement {
   const text = UI_TEXT[language];
@@ -79,7 +79,7 @@ export function createReturnInfoWidget(
   defectiveText.className = `amazon-returns-ext__text ${
     policyData.defectivePolicy.isFree ? 'amazon-returns-ext__text--free' : 'amazon-returns-ext__text--paid'
   }`;
-  defectiveText.textContent = formatReturnText(
+  defectiveText.innerHTML = formatReturnHTML(
     policyData.defectivePolicy.isFree,
     policyData.defectivePolicy.cost,
     policyData.defectivePolicy.window,
@@ -100,7 +100,7 @@ export function createReturnInfoWidget(
   regularText.className = `amazon-returns-ext__text ${
     policyData.regularReturnPolicy.isFree ? 'amazon-returns-ext__text--free' : 'amazon-returns-ext__text--paid'
   }`;
-  regularText.textContent = formatReturnText(
+  regularText.innerHTML = formatReturnHTML(
     policyData.regularReturnPolicy.isFree,
     policyData.regularReturnPolicy.cost,
     policyData.regularReturnPolicy.window,
@@ -206,6 +206,164 @@ export function createReturnInfoWidget(
   return widget;
 }
 
+export function createAmazonStyleBadge(
+  policyData: ReturnPolicyData,
+  language: 'en' | 'de'
+): HTMLElement {
+  const text = UI_TEXT[language];
+
+  // Create exact Amazon structure with proper container
+  const outerContainer = document.createElement('span');
+  outerContainer.id = 'amazon-returns-ext-container';
+  outerContainer.style.position = 'relative';
+  outerContainer.style.display = 'inline-block';
+
+  const container = document.createElement('span');
+  container.id = 'creturns-return-policy-message';
+  container.className = 'a-inline-block';
+
+  // Popover wrapper
+  const popoverWrapper = document.createElement('span');
+  popoverWrapper.className = 'a-declarative';
+
+  // Inner widget span
+  const widgetSpan = document.createElement('span');
+  widgetSpan.className = 'celwidget';
+
+  // Create the link (exactly like Amazon)
+  const badge = document.createElement('a');
+  badge.id = 'creturns-policy-anchor-text';
+  badge.href = 'javascript:void(0)';
+  badge.setAttribute('role', 'button');
+  badge.className = 'a-popover-trigger a-declarative a-inline-block';
+  badge.setAttribute('aria-expanded', 'false');
+
+  // Text content
+  const badgeText = document.createTextNode(language === 'en' ? 'Returns' : 'Rücksendung');
+  badge.appendChild(badgeText);
+  badge.appendChild(document.createTextNode(' '));
+
+  // Icon (Amazon's popover icon)
+  const icon = document.createElement('i');
+  icon.className = 'a-icon a-icon-popover';
+
+  badge.appendChild(icon);
+
+  // Assemble structure
+  widgetSpan.appendChild(badge);
+  popoverWrapper.appendChild(widgetSpan);
+  container.appendChild(popoverWrapper);
+  outerContainer.appendChild(container);
+
+  // Create the popover (Amazon's structure)
+  const popover = document.createElement('div');
+  popover.className = 'a-popover-preload';
+  popover.id = 'a-popover-cReturnsPolicyPopover';
+  popover.style.display = 'none';
+
+  const popoverInner = document.createElement('div');
+  popoverInner.className = 'celwidget';
+  popoverInner.setAttribute('role', 'dialog');
+
+  // Header
+  const header = document.createElement('h5');
+  header.id = 'creturns-policy-header';
+  header.textContent = language === 'en' ? 'Return costs for this item' : 'Rücksendekosten für diesen Artikel';
+
+  // Main content
+  const mainContent = document.createElement('p');
+  mainContent.id = 'creturns-policy-main-content';
+  mainContent.className = 'a-spacing-none a-spacing-top-small';
+
+  // Build content text
+  const defectiveText = formatReturnText(
+    policyData.defectivePolicy.isFree,
+    policyData.defectivePolicy.cost,
+    policyData.defectivePolicy.window,
+    language
+  );
+  const regularText = formatReturnText(
+    policyData.regularReturnPolicy.isFree,
+    policyData.regularReturnPolicy.cost,
+    policyData.regularReturnPolicy.window,
+    language
+  );
+
+  mainContent.innerHTML = `<strong>${text.defectiveItems}:</strong> ${defectiveText}<br><br><strong>${text.regularReturns}:</strong> ${regularText}`;
+
+  popoverInner.appendChild(header);
+  popoverInner.appendChild(mainContent);
+  popover.appendChild(popoverInner);
+  outerContainer.appendChild(popover);
+
+  // Toggle functionality (Amazon's popover behavior)
+  badge.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isExpanded = badge.getAttribute('aria-expanded') === 'true';
+    badge.setAttribute('aria-expanded', (!isExpanded).toString());
+
+    if (!isExpanded) {
+      // Show popover
+      popover.style.display = 'block';
+      popover.className = 'a-popover-preload a-popover a-popover-modal a-declarative';
+    } else {
+      // Hide popover
+      popover.style.display = 'none';
+      popover.className = 'a-popover-preload';
+    }
+  });
+
+  // Close popover when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!outerContainer.contains(e.target as Node)) {
+      badge.setAttribute('aria-expanded', 'false');
+      popover.style.display = 'none';
+      popover.className = 'a-popover-preload';
+    }
+  });
+
+  return outerContainer;
+}
+
+export function findDeliveryMessageElement(): HTMLElement | null {
+  // Find the specific delivery message element (not the container)
+  // Look for the span/div that contains "FREE delivery" or delivery cost
+  const deliverySelectors = [
+    '[data-csa-c-content-id*="DEXUnifiedCXPDM"]',  // The actual delivery message span
+    '#deliveryMessageMirId span',                   // Delivery message inside the container
+  ];
+
+  for (const selector of deliverySelectors) {
+    const element = document.querySelector(selector);
+    if (element && element.textContent?.includes('delivery')) {
+      return element.parentElement as HTMLElement;  // Return parent to insert after
+    }
+  }
+
+  // Fallback: find the delivery block container
+  const blockSelectors = [
+    '#mir-layout-DELIVERY_BLOCK',
+    '#deliveryMessageMirId',
+  ];
+
+  for (const selector of blockSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      // Find the first child that contains delivery text
+      const children = element.querySelectorAll('*');
+      for (const child of Array.from(children)) {
+        if (child.textContent?.includes('delivery') && child.textContent.length < 200) {
+          return child.parentElement as HTMLElement;
+        }
+      }
+      return element as HTMLElement;
+    }
+  }
+
+  return null;
+}
+
 export function findInjectionPoint(): HTMLElement | null {
   const selectors = [
     '#addToCart_feature_div',
@@ -225,6 +383,27 @@ export function findInjectionPoint(): HTMLElement | null {
   return null;
 }
 
+export function injectBadge(badge: HTMLElement): void {
+  // Insert before deliveryBlockContainer (Amazon's structure)
+  const deliveryBlockContainer = document.querySelector('#deliveryBlockContainer');
+
+  if (deliveryBlockContainer) {
+    deliveryBlockContainer.insertAdjacentElement('beforebegin', badge);
+  } else {
+    // Fallback: try other delivery selectors
+    const deliveryElement = findDeliveryMessageElement();
+    if (deliveryElement) {
+      deliveryElement.insertAdjacentElement('beforebegin', badge);
+    } else {
+      // Last resort
+      const injectionPoint = findInjectionPoint();
+      if (injectionPoint) {
+        injectionPoint.insertAdjacentElement('afterend', badge);
+      }
+    }
+  }
+}
+
 export function injectWidget(widget: HTMLElement): void {
   const injectionPoint = findInjectionPoint();
 
@@ -242,5 +421,12 @@ export function updateWidget(widget: HTMLElement): void {
   const existingWidget = document.getElementById('amazon-returns-ext-widget');
   if (existingWidget && existingWidget.parentNode) {
     existingWidget.parentNode.replaceChild(widget, existingWidget);
+  }
+}
+
+export function updateBadge(badge: HTMLElement): void {
+  const existingBadge = document.getElementById('amazon-returns-ext-badge');
+  if (existingBadge && existingBadge.parentNode) {
+    existingBadge.parentNode.replaceChild(badge, existingBadge);
   }
 }

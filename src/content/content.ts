@@ -3,7 +3,7 @@ import browser from 'webextension-polyfill';
 import { detectAmazonRegion, detectLanguage } from '../shared/regionDetector';
 import { scrapeProductPagePolicy, getFallbackPolicy } from './policyScraper';
 import { detectThirdPartySeller, fetchSellerReturnPolicy } from './sellerScraper';
-import { createReturnInfoWidget, createLoadingWidget, createErrorWidget, injectWidget, updateWidget } from './ui';
+import { createReturnInfoWidget, createLoadingWidget, createErrorWidget, injectWidget, updateWidget, createAmazonStyleBadge, injectBadge, updateBadge } from './ui';
 import { ReturnPolicyData } from '../shared/types';
 
 async function main() {
@@ -18,14 +18,12 @@ async function main() {
     await waitForProductDetails();
   }
 
+  // Check if badge or widget already exists
+  const existingBadge = document.getElementById('amazon-returns-ext-badge');
   const existingWidget = document.getElementById('amazon-returns-ext-widget');
-  if (existingWidget) {
+  if (existingBadge || existingWidget) {
     return;
   }
-
-  // Inject loading widget immediately
-  const loadingWidget = createLoadingWidget(language);
-  injectWidget(loadingWidget);
 
   let policyData: ReturnPolicyData | null = null;
 
@@ -91,14 +89,12 @@ async function main() {
     }
   }
 
-  // Update widget with data or error
+  // Show badge if we have policy data (meaning non-free returns)
   if (policyData) {
-    const widget = createReturnInfoWidget(policyData, language);
-    updateWidget(widget);
-  } else {
-    const errorWidget = createErrorWidget(language);
-    updateWidget(errorWidget);
+    const badge = createAmazonStyleBadge(policyData, language);
+    injectBadge(badge);
   }
+  // If no policy data, don't show anything (either free returns already shown by Amazon, or no info available)
 }
 
 function waitForProductDetails(): Promise<void> {

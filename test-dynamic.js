@@ -76,21 +76,25 @@ async function testProduct(browser, testCase) {
       // No cookie dialog or already accepted
     }
 
-    // Wait for extension widget
-    console.log('⏳ Waiting for extension widget...');
+    // Wait for extension widget or badge
+    console.log('⏳ Waiting for extension widget or badge...');
     const widgetSelector = '.amazon-returns-ext__widget';
+    const badgeSelector = '.amazon-returns-ext__badge-container';
 
     let widgetFound = false;
+    let badgeFound = false;
     try {
-      await page.waitForSelector(widgetSelector, { timeout: 10000 });
-      widgetFound = true;
-      console.log('✅ Extension widget found!');
+      await page.waitForSelector(`${widgetSelector}, ${badgeSelector}`, { timeout: 10000 });
+      widgetFound = !!(await page.$(widgetSelector));
+      badgeFound = !!(await page.$(badgeSelector));
+      if (widgetFound) console.log('✅ Extension widget found!');
+      if (badgeFound) console.log('✅ Extension badge found!');
     } catch (e) {
-      console.log('❌ Extension widget NOT found');
+      console.log('❌ Extension widget/badge NOT found');
     }
 
-    if (!widgetFound && testCase.expectedBehavior.hasWidget) {
-      console.log('⚠️  Expected widget but none found');
+    if (!widgetFound && !badgeFound && testCase.expectedBehavior.hasWidget) {
+      console.log('⚠️  Expected widget/badge but none found');
 
       // Debug: Check extension logs
       const extensionLogs = logs.filter(log => log.includes('[Amazon Returns Extension]'));
@@ -109,10 +113,12 @@ async function testProduct(browser, testCase) {
       return { success: false, testCase: testCase.name, error: 'Widget not found' };
     }
 
-    // Analyze widget content
+    // Analyze widget/badge content
     const widgetText = await page.evaluate(() => {
       const widget = document.querySelector('.amazon-returns-ext__widget');
-      return widget ? widget.innerText : null;
+      const badge = document.querySelector('.amazon-returns-ext__badge-container');
+      const element = widget || badge;
+      return element ? element.innerText : null;
     });
 
     console.log('\n📦 Widget Content:');
