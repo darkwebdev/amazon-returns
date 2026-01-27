@@ -206,6 +206,38 @@ export function createReturnInfoWidget(
   return widget;
 }
 
+function attachBadgeEventListeners(container: HTMLElement): void {
+  const badge = container.querySelector('#creturns-policy-anchor-text') as HTMLElement;
+  const popover = container.querySelector('#a-popover-cReturnsPolicyPopover') as HTMLElement;
+
+  if (!badge || !popover) return;
+
+  // Toggle functionality
+  badge.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isExpanded = badge.getAttribute('aria-expanded') === 'true';
+    badge.setAttribute('aria-expanded', (!isExpanded).toString());
+
+    if (!isExpanded) {
+      popover.style.display = 'block';
+      popover.className = 'a-popover-preload a-popover a-popover-modal a-declarative';
+    } else {
+      popover.style.display = 'none';
+      popover.className = 'a-popover-preload';
+    }
+  });
+
+  // Close popover when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!container.contains(e.target as Node)) {
+      badge.setAttribute('aria-expanded', 'false');
+      popover.style.display = 'none';
+      popover.className = 'a-popover-preload';
+    }
+  });
+}
+
 export function createAmazonStyleBadge(
   policyData: ReturnPolicyData,
   language: 'en' | 'de'
@@ -296,32 +328,8 @@ export function createAmazonStyleBadge(
   popover.appendChild(popoverInner);
   outerContainer.appendChild(popover);
 
-  // Toggle functionality (Amazon's popover behavior)
-  badge.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const isExpanded = badge.getAttribute('aria-expanded') === 'true';
-    badge.setAttribute('aria-expanded', (!isExpanded).toString());
-
-    if (!isExpanded) {
-      // Show popover
-      popover.style.display = 'block';
-      popover.className = 'a-popover-preload a-popover a-popover-modal a-declarative';
-    } else {
-      // Hide popover
-      popover.style.display = 'none';
-      popover.className = 'a-popover-preload';
-    }
-  });
-
-  // Close popover when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!outerContainer.contains(e.target as Node)) {
-      badge.setAttribute('aria-expanded', 'false');
-      popover.style.display = 'none';
-      popover.className = 'a-popover-preload';
-    }
-  });
+  // Attach event listeners
+  attachBadgeEventListeners(outerContainer);
 
   return outerContainer;
 }
@@ -384,18 +392,36 @@ export function findInjectionPoint(): HTMLElement | null {
 }
 
 export function injectBadge(badge: HTMLElement): void {
-  // Insert before deliveryBlockContainer (Amazon's structure)
-  const deliveryBlockContainer = document.querySelector('#deliveryBlockContainer');
+  // Inject in MULTIPLE locations - Amazon shows returns info in different places
+  const injectionPoints = [
+    { selector: '#deliveryBlockContainer', position: 'beforebegin' as const },
+    { selector: '#vatMessage_feature_div', position: 'beforebegin' as const },
+  ];
 
-  if (deliveryBlockContainer) {
-    deliveryBlockContainer.insertAdjacentElement('beforebegin', badge);
-  } else {
-    // Fallback: try other delivery selectors
+  let injected = false;
+
+  for (const point of injectionPoints) {
+    const element = document.querySelector(point.selector);
+    if (element) {
+      // Clone the badge for each location
+      const badgeClone = injected ? badge.cloneNode(true) as HTMLElement : badge;
+      element.insertAdjacentElement(point.position, badgeClone);
+
+      // Re-attach event listeners for cloned badges
+      if (injected) {
+        attachBadgeEventListeners(badgeClone);
+      }
+
+      injected = true;
+    }
+  }
+
+  // If we didn't inject anywhere, try fallback locations
+  if (!injected) {
     const deliveryElement = findDeliveryMessageElement();
     if (deliveryElement) {
       deliveryElement.insertAdjacentElement('beforebegin', badge);
     } else {
-      // Last resort
       const injectionPoint = findInjectionPoint();
       if (injectionPoint) {
         injectionPoint.insertAdjacentElement('afterend', badge);

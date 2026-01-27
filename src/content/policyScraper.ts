@@ -16,20 +16,25 @@ export async function scrapeProductPagePolicy(
   let returnCost: string | null = null;
   let foundAnyReturnInfo = false;
 
-  // First, check if Amazon already shows returns information
-  // Check inside the shipping message container for Amazon's original badge
-  const shippingContainer = document.querySelector('#shippingMessageInsideBuyBox_feature_div');
+  // First, check if Amazon already shows returns information in multiple locations
+  const returnsContainers = [
+    '#shippingMessageInsideBuyBox_feature_div',  // Location 1: Inside buy box shipping message
+    '#freeReturns_feature_div',                   // Location 2: Separate free returns section
+  ];
 
-  if (shippingContainer) {
-    // Look for Amazon's original returns message span
-    const returnsContent = shippingContainer.querySelector('#creturns-return-policy-content');
+  for (const containerSelector of returnsContainers) {
+    const container = document.querySelector(containerSelector);
+    if (container) {
+      // Look for Amazon's returns content
+      const returnsContent = container.querySelector('#creturns-return-policy-content');
 
-    if (returnsContent) {
-      // Amazon has returns content - check if it's FREE returns
-      const text = returnsContent.textContent?.trim() || '';
-      if (text.match(/FREE.*Return|GRATIS.*Rück|Kostenlose/i)) {
-        // Amazon shows FREE returns, don't show our badge
-        return null;
+      if (returnsContent) {
+        // Amazon has returns content - check if it's FREE returns
+        const text = returnsContent.textContent?.trim() || '';
+        if (text.match(/FREE.*Return|GRATIS.*Rück|Kostenlose/i)) {
+          // Amazon shows FREE returns, don't show our badge
+          return null;
+        }
       }
     }
   }
