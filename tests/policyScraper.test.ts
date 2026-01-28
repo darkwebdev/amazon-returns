@@ -28,36 +28,11 @@ describe('Policy Scraper', () => {
       loadFixture('amazon-com-free-returns.html');
     });
 
-    it('should detect free returns', async () => {
+    it('should return null when Amazon shows FREE Returns', async () => {
       const result = await scrapeProductPagePolicy(US_REGION, 'en');
 
-      expect(result).not.toBeNull();
-      expect(result!.isFreeReturn).toBe(true);
-      expect(result!.returnCost).toBeNull();
-    });
-
-    it('should detect 30-day return window', async () => {
-      const result = await scrapeProductPagePolicy(US_REGION, 'en');
-
-      expect(result).not.toBeNull();
-      expect(result!.returnWindow).toBe(30);
-    });
-
-    it('should set regular return policy correctly', async () => {
-      const result = await scrapeProductPagePolicy(US_REGION, 'en');
-
-      expect(result).not.toBeNull();
-      expect(result!.regularReturnPolicy.isFree).toBe(true);
-      expect(result!.regularReturnPolicy.cost).toBeNull();
-      expect(result!.regularReturnPolicy.window).toBe(30);
-    });
-
-    it('should set defective policy as free', async () => {
-      const result = await scrapeProductPagePolicy(US_REGION, 'en');
-
-      expect(result).not.toBeNull();
-      expect(result!.defectivePolicy.isFree).toBe(true);
-      expect(result!.defectivePolicy.cost).toBeNull();
+      // When Amazon displays FREE Returns badge, extension should not show anything
+      expect(result).toBeNull();
     });
   });
 
@@ -66,19 +41,11 @@ describe('Policy Scraper', () => {
       loadFixture('amazon-de-free-returns.html');
     });
 
-    it('should detect kostenlose rücksendung', async () => {
+    it('should return null when Amazon shows FREE Returns', async () => {
       const result = await scrapeProductPagePolicy(DE_REGION, 'de');
 
-      expect(result).not.toBeNull();
-      expect(result!.isFreeReturn).toBe(true);
-      expect(result!.returnCost).toBeNull();
-    });
-
-    it('should detect 14-day return window', async () => {
-      const result = await scrapeProductPagePolicy(DE_REGION, 'de');
-
-      expect(result).not.toBeNull();
-      expect(result!.returnWindow).toBe(14);
+      // When Amazon displays FREE Returns badge, extension should not show anything
+      expect(result).toBeNull();
     });
   });
 
@@ -161,18 +128,11 @@ describe('Policy Scraper', () => {
       loadFixture('amazon-com-third-party-free.html');
     });
 
-    it('should detect free returns from third party', async () => {
+    it('should return null when Amazon shows FREE Returns', async () => {
       const result = await scrapeProductPagePolicy(US_REGION, 'en');
 
-      expect(result).not.toBeNull();
-      expect(result!.isFreeReturn).toBe(true);
-    });
-
-    it('should detect extended return window (60 days)', async () => {
-      const result = await scrapeProductPagePolicy(US_REGION, 'en');
-
-      expect(result).not.toBeNull();
-      expect(result!.returnWindow).toBe(60);
+      // When Amazon displays FREE Returns badge, extension should not show anything
+      expect(result).toBeNull();
     });
   });
 
@@ -237,19 +197,11 @@ describe('Policy Scraper', () => {
       loadFixture('amazon-com-extended-holiday.html');
     });
 
-    it('should detect free returns with extended window', async () => {
+    it('should return null when Amazon shows FREE Returns', async () => {
       const result = await scrapeProductPagePolicy(US_REGION, 'en');
 
-      expect(result).not.toBeNull();
-      expect(result!.isFreeReturn).toBe(true);
-      expect(result!.returnCost).toBeNull();
-    });
-
-    it('should detect 90-day extended holiday return window', async () => {
-      const result = await scrapeProductPagePolicy(US_REGION, 'en');
-
-      expect(result).not.toBeNull();
-      expect(result!.returnWindow).toBe(90);
+      // When Amazon displays FREE Returns badge, extension should not show anything
+      expect(result).toBeNull();
     });
   });
 
