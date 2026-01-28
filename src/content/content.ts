@@ -19,9 +19,15 @@ async function main() {
   }
 
   // Check if badge or widget already exists
-  const existingBadge = document.getElementById('amazon-returns-ext-badge');
+  const existingBadge = document.getElementById('amazon-returns-ext-container');
   const existingWidget = document.getElementById('amazon-returns-ext-widget');
   if (existingBadge || existingWidget) {
+    return;
+  }
+
+  // Quick check: if Amazon shows FREE Returns, exit immediately
+  const hasAmazonFreeReturns = checkAmazonFreeReturns();
+  if (hasAmazonFreeReturns) {
     return;
   }
 
@@ -97,6 +103,28 @@ async function main() {
   // If no policy data, don't show anything (either free returns already shown by Amazon, or no info available)
 }
 
+function checkAmazonFreeReturns(): boolean {
+  // Quick check if Amazon already shows FREE Returns badge
+  const returnsContainers = [
+    '#shippingMessageInsideBuyBox_feature_div',
+    '#freeReturns_feature_div',
+  ];
+
+  for (const containerSelector of returnsContainers) {
+    const container = document.querySelector(containerSelector);
+    if (container) {
+      const returnsContent = container.querySelector('#creturns-return-policy-content');
+      if (returnsContent) {
+        const text = returnsContent.textContent?.trim() || '';
+        if (text.match(/FREE.*Return|GRATIS.*Rück|Kostenlose/i)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 function waitForProductDetails(): Promise<void> {
   return new Promise((resolve) => {
     const checkInterval = setInterval(() => {
@@ -104,12 +132,12 @@ function waitForProductDetails(): Promise<void> {
         clearInterval(checkInterval);
         resolve();
       }
-    }, 500);
+    }, 100); // Check every 100ms instead of 500ms
 
     setTimeout(() => {
       clearInterval(checkInterval);
       resolve();
-    }, 5000);
+    }, 2000); // Reduce timeout from 5s to 2s
   });
 }
 
