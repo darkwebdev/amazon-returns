@@ -106,7 +106,9 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.13);
   padding: 14px 18px;
   z-index: 1000000;
-  max-width: 280px;
+  min-width: 280px;
+  max-width: 350px;
+  width: max-content;
   top: calc(100% + 8px);
   left: 0;
   visibility: visible !important;
